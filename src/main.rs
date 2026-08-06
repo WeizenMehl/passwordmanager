@@ -24,11 +24,10 @@ fn main() {
 }
 fn init() -> std::io::Result<()>{
     println!("Please input MasterPassword!\n(!IMPORTANT! This password cant be reseted if you lose it you lose everthing)");
-    let mut encryption_key = String::new(); //this will for now serve no purpose but eventually encryption will be implemented
+    let mut password = String::new(); //this will for now serve no purpose but eventually encryption will be implemented
     io::stdin()
-        .read_line(&mut encryption_key)
+        .read_line(&mut password)
         .expect("Error when trying to read password input");
     File::create("data.csv")?;
     Ok(())
-
 }
