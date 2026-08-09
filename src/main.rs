@@ -49,13 +49,8 @@ fn store_sault(salt: &Salt) -> std::io::Result<()>{
 }
 
 fn generate_key(password: &kdf::Password) -> Result<SecretKey, UnknownCryptoError>{
-    let mut salt = Salt::default();
+    let salt = Salt::default();
     store_sault(&salt).expect("Couldnt store Salt"); 
-    
-    if fs::exists("salt.bin").expect("Couldnt check if salt.bin exists") {
-        let salt_bytes = fs::read("salt.bin").expect("couldnt open salt.bin");
-        salt = Salt::from_slice(&salt_bytes)?;
-    }
     let key = kdf::derive_key(password, &salt, 5, 1<<16, 32);
     key
 }
@@ -65,7 +60,7 @@ fn get_user_password() -> Result<Password,UnknownCryptoError>{
     let mut password = String::new();
     io::stdin()
         .read_line(&mut password)
-        .expect("Error when trying to read password input");
+        .expect("Error when trying to read password input"); //Password is currently visible when typing
     let password = password.trim_end();
     let password = kdf::Password::from_slice(password.as_bytes());
     password
@@ -75,4 +70,11 @@ fn encrypt(password: &kdf::Password,data: &[u8]) -> Vec<u8>{
     let key = generate_key(&password).expect("Error while generating key");
     let encrypted_data =aead::seal(&key,data).expect("Erro while trying to encrypting file");
     encrypted_data
+}
+
+fn load_key(password: & kdf::Password)  -> Result<SecretKey, UnknownCryptoError> { //used after initlasation
+    let salt_bytes = fs::read("salt.bin").expect("Couldnt read salt.bin, check if file exitst");
+    let salt = Salt::from_slice(&salt_bytes)?;
+    let key = kdf::derive_key(password, &salt, 5, 1<<16, 32);
+    key
 }
