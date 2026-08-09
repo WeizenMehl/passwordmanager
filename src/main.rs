@@ -34,13 +34,11 @@ fn init() -> std::io::Result<()>{
         Err(error) => return Err(std::io::Error::other(error)),
     };
 
-    let key = match generate_key(&password){
-        Ok(secretkey) => secretkey,
-        Err(error) => return Err(std::io::Error::other(error)),
-    };
-    File::create("data.bin")?;
+    let data = br#"{"entries":[]}"#;
 
-    encrypt_file(&key, "data.bin");
+    let encrypted_data = encrypt(&password, data);
+
+    fs::write("data.enc", encrypted_data).expect("Error while initiating file");
     Ok(())
 }
 
@@ -51,8 +49,13 @@ fn store_sault(salt: &Salt) -> std::io::Result<()>{
 }
 
 fn generate_key(password: &kdf::Password) -> Result<SecretKey, UnknownCryptoError>{
-    let salt = Salt::default();
+    let mut salt = Salt::default();
     store_sault(&salt).expect("Couldnt store Salt"); 
+    
+    if fs::exists("salt.bin").expect("Couldnt check if salt.bin exists") {
+        let salt_bytes = fs::read("salt.bin").expect("couldnt open salt.bin");
+        salt = Salt::from_slice(&salt_bytes)?;
+    }
     let key = kdf::derive_key(password, &salt, 5, 1<<16, 32);
     key
 }
@@ -68,7 +71,8 @@ fn get_user_password() -> Result<Password,UnknownCryptoError>{
     password
 }
 
-fn encrypt_file(key: &SecretKey,filename: &str){
-    let data = fs::read(filename).expect("Error while trying to open file");
-    aead::seal(key,&data).expect("Erro while trying to encrypt file");
+fn encrypt(password: &kdf::Password,data: &[u8]) -> Vec<u8>{
+    let key = generate_key(&password).expect("Error while generating key");
+    let encrypted_data =aead::seal(&key,data).expect("Erro while trying to encrypting file");
+    encrypted_data
 }
