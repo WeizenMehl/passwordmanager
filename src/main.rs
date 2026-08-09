@@ -1,9 +1,11 @@
-use clap::{Parser};
+use clap::Parser;
 use orion::errors::UnknownCryptoError;
 use orion::aead::SecretKey;
 use std::io::Write;
 use std::io;
+use std::fs;
 use std::fs::File;
+use orion::aead;
 use orion::kdf::{self, Password, Salt};
 
 /// And simple CLI based password manager
@@ -36,7 +38,9 @@ fn init() -> std::io::Result<()>{
         Ok(secretkey) => secretkey,
         Err(error) => return Err(std::io::Error::other(error)),
     };
-    create_file("data.bin")?;
+    File::create("data.bin")?;
+
+    encrypt_file(&key, "data.bin");
     Ok(())
 }
 
@@ -64,7 +68,7 @@ fn get_user_password() -> Result<Password,UnknownCryptoError>{
     password
 }
 
-fn create_file(filename: &str) -> std::io::Result<()>{ //have this just in case that I implement the option that the user wants multiple files.
-    File::create(filename)?;
-    Ok(())
+fn encrypt_file(key: &SecretKey,filename: &str){
+    let data = fs::read(filename).expect("Error while trying to open file");
+    aead::seal(key,&data).expect("Erro while trying to encrypt file");
 }
