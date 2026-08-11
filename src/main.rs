@@ -57,8 +57,17 @@ fn add() -> std::io::Result<()>{
     println!("Input your master password");
     let password = get_user_password().expect("error while getting user password");
     let data = fs::read("data.enc")?;
-    let decypted_data= decrypt(&password, &data);
-    println!("{:?}",decypted_data); //to check if decrption works really
+    let mut decrypted_data: Value = serde_json::from_slice(&decrypt(&password, &data))?;
+
+
+    decrypted_data["entries"].as_array_mut().unwrap().push(json!({
+        "name": "Alice",
+        "value": 123
+    }));
+    let modified: Vec<u8> = serde_json::to_vec(&decrypted_data)?;
+    encrypt(&password, &modified);
+    fs::write("data.enc", &modified).expect("Couldnt write to file");
+    println!("{:?}",decrypted_data); //for debugging
     Ok(())
 }
 
