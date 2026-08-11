@@ -55,18 +55,33 @@ fn init() -> std::io::Result<()>{
 
 fn add() -> std::io::Result<()>{
     println!("Input your master password");
-    let password = get_user_password().expect("error while getting user password");
+    let masterpassword = get_user_password().expect("error while getting user password");
+
+    let mut titel = String::new();
+    println!("Input the Titel of the service");
+    io::stdin()
+        .read_line(&mut titel)
+        .expect("Couldnt read titel input");
+    let titel = titel.trim_end();
+    
+    let mut password = String::new();
+    println!("Input the password for the service");
+    io::stdin()
+        .read_line(&mut password)
+        .expect("Couldnt read password input");
+    let password = password.trim_end();
+
     let data = fs::read("data.enc")?;
-    let mut decrypted_data: Value = serde_json::from_slice(&decrypt(&password, &data))?;
+    let mut decrypted_data: Value = serde_json::from_slice(&decrypt(&masterpassword, &data))?;
 
 
-    decrypted_data["entries"].as_array_mut().unwrap().push(json!({
-        "name": "Alice",
-        "value": 123
+    decrypted_data["entries"].as_array_mut().unwrap().push(json!({ //static for now
+        "titel": titel,
+        "password": password
     }));
     let modified: Vec<u8> = serde_json::to_vec(&decrypted_data)?;
-    encrypt(&password, &modified);
-    fs::write("data.enc", &modified).expect("Couldnt write to file");
+    let encrypted_data = encrypt(&masterpassword, &modified);
+    fs::write("data.enc", &encrypted_data).expect("Couldnt write to file");
     println!("{:?}",decrypted_data); //for debugging
     Ok(())
 }
