@@ -7,6 +7,7 @@ use std::fs;
 use std::fs::File;
 use orion::aead;
 use orion::kdf::{self, Password, Salt};
+use serde_json::{json,Value};
 
 /// And simple CLI based password manager
 #[derive(Parser)]
@@ -14,6 +15,10 @@ struct Cli{
     /// Initiates the Password Mangager
     #[arg(short,long)]
     init: bool,
+
+    /// Add an password and username
+    #[arg(short,long)]
+    add: bool,
 }
 
 fn main() {
@@ -25,20 +30,35 @@ fn main() {
                 println!("Couldnt initialize: {}", error)
             }
         }
-    }
 
+    }
+    else if args.add {
+        match add(){
+            Ok(()) => println!("Added password"),
+            Err(error) => {
+                println!("Couldnt add password: {}",error)
+            }
+        }
+    }
 }
 fn init() -> std::io::Result<()>{
-    let password = match get_user_password(){
-        Ok(password) => password,
-        Err(error) => return Err(std::io::Error::other(error)),
-    };
+    println!("Please input MasterPassword!\n(!IMPORTANT! This password cant be restored, if you lose it you lose everthing)");
+    let password = get_user_password().expect("error while getting user password");
 
     let data = br#"{"entries":[]}"#;
 
     let encrypted_data = encrypt(&password, data);
 
     fs::write("data.enc", encrypted_data).expect("Error while initiating file");
+    Ok(())
+}
+
+fn add() -> std::io::Result<()>{
+    println!("Input your master password");
+    let password = get_user_password().expect("error while getting user password");
+    let data = fs::read("data.enc")?;
+    let decypted_data= decrypt(&password, &data);
+    println!("{:?}",decypted_data); //to check if decrption works really
     Ok(())
 }
 
@@ -56,7 +76,6 @@ fn generate_key(password: &kdf::Password) -> Result<SecretKey, UnknownCryptoErro
 }
 
 fn get_user_password() -> Result<Password,UnknownCryptoError>{
-    println!("Please input MasterPassword!\n(!IMPORTANT! This password cant be restored, if you lose it you lose everthing)");
     let mut password = String::new();
     io::stdin()
         .read_line(&mut password)
@@ -70,6 +89,12 @@ fn encrypt(password: &kdf::Password,data: &[u8]) -> Vec<u8>{
     let key = generate_key(&password).expect("Error while generating key");
     let encrypted_data =aead::seal(&key,data).expect("Erro while trying to encrypting file");
     encrypted_data
+}
+
+fn decrypt(password: &kdf::Password, data: &[u8]) -> Vec<u8>{
+    let key = load_key(password).expect("Error while loading key");
+    let decrypted_data = aead::open(&key, data).expect("Error while trying to decrypt data");
+    decrypted_data
 }
 
 fn load_key(password: & kdf::Password)  -> Result<SecretKey, UnknownCryptoError> { //used after initlasation
