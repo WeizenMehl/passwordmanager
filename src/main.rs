@@ -16,9 +16,13 @@ struct Cli{
     #[arg(short,long)]
     init: bool,
 
-    /// Add an password and username
+    /// Add an password and title
     #[arg(short,long)]
     add: bool,
+
+    /// Show specific username
+    #[arg(short,long)]
+    show: String,
 }
 
 fn main() {
@@ -39,6 +43,9 @@ fn main() {
                 println!("Couldnt add password: {}",error)
             }
         }
+    }
+    else if let Some(titel) = args.show{
+
     }
 }
 fn init() -> std::io::Result<()>{
@@ -83,6 +90,22 @@ fn add() -> std::io::Result<()>{
     let encrypted_data = encrypt(&masterpassword, &modified);
     fs::write("data.enc", &encrypted_data).expect("Couldnt write to file");
     println!("{:?}",decrypted_data); //for debugging
+    Ok(())
+}
+
+fn show(input: &str) -> std::io::Result<()>{
+    let password = get_user_password().expect("error while getting user password");
+    let data = fs::read("data.enc")?;
+    let mut decrypted_data: Value = serde_json::from_slice(&decrypt(&masterpassword, &data))?;
+
+    let entries = data["entries"].as_object().unwrap();
+
+    for (password, titel) in entries {
+        if titel == input{
+            println!("Titel:{}", titel);
+            println!("Password:{}", password);
+        }
+    }
     Ok(())
 }
 
