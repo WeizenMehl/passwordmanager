@@ -8,7 +8,7 @@ use std::fs::File;
 use orion::aead;
 use orion::kdf::{self, Password, Salt};
 use serde_json::{json,Value};
-
+use serde::Deserialize;
 /// And simple CLI based password manager
 #[derive(Parser)]
 struct Cli{
@@ -22,7 +22,7 @@ struct Cli{
 
     /// Show specific username
     #[arg(short,long)]
-    show: String,
+    show: Option<String>,
 }
 
 fn main() {
@@ -44,15 +44,20 @@ fn main() {
             }
         }
     }
-    else if let Some(titel) = args.show{
-
+    else if let Some(titel) = args.show {
+        match show(&titel){
+            Ok(()) => println!("Shwowing password was succesfull"),
+            Err(error) => {
+                println!("Couldnt show password: {}", error)
+            }
+        }
     }
 }
 fn init() -> std::io::Result<()>{
     println!("Please input MasterPassword!\n(!IMPORTANT! This password cant be restored, if you lose it you lose everthing)");
     let password = get_user_password().expect("error while getting user password");
 
-    let data = br#"{"entries":[]}"#;
+    let data = br#"[]"#;
 
     let encrypted_data = encrypt(&password, data);
 
@@ -82,31 +87,39 @@ fn add() -> std::io::Result<()>{
     let mut decrypted_data: Value = serde_json::from_slice(&decrypt(&masterpassword, &data))?;
 
 
-    decrypted_data["entries"].as_array_mut().unwrap().push(json!({ //static for now
+    decrypted_data.as_array_mut().unwrap().push(json!({
         "titel": titel,
         "password": password
     }));
     let modified: Vec<u8> = serde_json::to_vec(&decrypted_data)?;
     let encrypted_data = encrypt(&masterpassword, &modified);
     fs::write("data.enc", &encrypted_data).expect("Couldnt write to file");
-    println!("{:?}",decrypted_data); //for debugging
     Ok(())
 }
 
-fn show(input: &str) -> std::io::Result<()>{
-    let password = get_user_password().expect("error while getting user password");
+#[derive(Deserialize)]
+struct Entry {
+    password: String,
+    titel: String,
+}
+
+fn show(titel: &str) -> std::io::Result<()>{
+    println!("Input Master Password");
+    let masterpassword = get_user_password().expect("error while getting user password");
     let data = fs::read("data.enc")?;
-    let mut decrypted_data: Value = serde_json::from_slice(&decrypt(&masterpassword, &data))?;
+    let decrypted_data: Vec<Entry> = serde_json::from_slice(&decrypt(&masterpassword, &data))?;
+    
 
-    let entries = data["entries"].as_object().unwrap();
 
-    for (password, titel) in entries {
-        if titel == input{
-            println!("Titel:{}", titel);
-            println!("Password:{}", password);
-        }
+    let password =  decrypted_data.iter().find(|x| x.titel == titel).map(|x| x.password.as_str());
+    
+    if let Some(x) = password {
+        println!("Titel: {}, Password {}", titel,x);
     }
-    Ok(())
+    else {
+        println!("No entry found for titel: {}",titel);
+    } 
+    Ok(()) 
 }
 
 fn store_sault(salt: &Salt) -> std::io::Result<()>{

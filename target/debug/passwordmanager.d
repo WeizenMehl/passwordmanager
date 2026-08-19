@@ -1,1 +1,1 @@
-/home/samuelt/Documents/rust-projects/passwordmanager/target/debug/passwordmanager: /home/samuelt/Documents/rust-projects/passwordmanager/src/main.rs
+/home/samuel/Documents/Obsidian_Vault/rust-projects/passwordmanager/target/debug/passwordmanager: /home/samuel/Documents/Obsidian_Vault/rust-projects/passwordmanager/src/main.rs
