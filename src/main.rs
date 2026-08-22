@@ -23,6 +23,9 @@ struct Cli{
     /// Show specific username
     #[arg(short,long)]
     show: Option<String>,
+
+    #[arg(short,long)]
+    titels: bool,
 }
 
 fn main() {
@@ -49,6 +52,14 @@ fn main() {
             Ok(()) => println!("Shwowing password was succesfull"),
             Err(error) => {
                 println!("Couldnt show password: {}", error)
+            }
+        }
+    }
+    else if args.titels {
+        match titels(){
+            Ok(()) => println!("Shwowing all titels was succesfull"),
+            Err(error) => {
+                println!("Couldnt show titels: {}", error)
             }
         }
     }
@@ -103,6 +114,7 @@ struct Entry {
     titel: String,
 }
 
+// showes specific password for an given Titel
 fn show(titel: &str) -> std::io::Result<()>{
     println!("Input Master Password");
     let masterpassword = get_user_password().expect("error while getting user password");
@@ -120,6 +132,19 @@ fn show(titel: &str) -> std::io::Result<()>{
         println!("No entry found for titel: {}",titel);
     } 
     Ok(()) 
+}
+
+// shows all titels
+fn titels() -> std::io::Result<()>{
+    println!("Input Master Password");
+    let masterpassword = get_user_password().expect("error while getting user password");
+    let data = fs::read("data.enc")?;
+    let decrypted_data: Vec<Entry> = serde_json::from_slice(&decrypt(&masterpassword, &data))?;
+
+    for entry in decrypted_data.iter(){
+        println!("Titel: {}", entry.titel);
+    }
+    Ok(())
 }
 
 fn store_sault(salt: &Salt) -> std::io::Result<()>{
