@@ -6,6 +6,7 @@ use std::io;
 use std::fs;
 use std::fs::File;
 use orion::aead;
+use orion::hash::{digest, Digest};
 use orion::kdf::{self, Password, Salt};
 use serde_json::{json,Value};
 use serde::Deserialize;
@@ -66,11 +67,13 @@ fn main() {
 }
 fn init() -> std::io::Result<()>{
     println!("Please input MasterPassword!\n(!IMPORTANT! This password cant be restored, if you lose it you lose everthing)");
-    let password = get_user_password().expect("error while getting user password");
+    let masterpassword = get_user_password().expect("error while getting user password");
+    let password_hash = digest(masterpassword.unprotected_as_bytes()).expect("error while hashing masterpassword");
+    store_masterpassword(&password_hash).expect("couldnt store password_hash");
 
     let data = br#"[]"#;
 
-    let encrypted_data = encrypt(&password, data);
+    let encrypted_data = encrypt(&masterpassword, data);
 
     fs::write("data.enc", encrypted_data).expect("Error while initiating file");
     Ok(())
@@ -120,8 +123,6 @@ fn show(titel: &str) -> std::io::Result<()>{
     let masterpassword = get_user_password().expect("error while getting user password");
     let data = fs::read("data.enc")?;
     let decrypted_data: Vec<Entry> = serde_json::from_slice(&decrypt(&masterpassword, &data))?;
-    
-
 
     let password =  decrypted_data.iter().find(|x| x.titel == titel).map(|x| x.password.as_str());
     
@@ -144,6 +145,12 @@ fn titels() -> std::io::Result<()>{
     for entry in decrypted_data.iter(){
         println!("Titel: {}", entry.titel);
     }
+    Ok(())
+}
+
+fn store_masterpassword(password: &Digest) -> std::io::Result<()> {
+    let mut file = File::create("hash.bin")?;
+    file.write_all(password.as_ref())?;
     Ok(())
 }
 
