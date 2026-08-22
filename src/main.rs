@@ -82,6 +82,10 @@ fn init() -> std::io::Result<()>{
 fn add() -> std::io::Result<()>{
     println!("Input your master password");
     let masterpassword = get_user_password().expect("error while getting user password");
+    if !check_userpassword(&masterpassword){
+        println!("Password is incorrect");
+        return Ok(())
+    }
 
     let mut titel = String::new();
     println!("Input the Titel of the service");
@@ -121,6 +125,11 @@ struct Entry {
 fn show(titel: &str) -> std::io::Result<()>{
     println!("Input Master Password");
     let masterpassword = get_user_password().expect("error while getting user password");
+    if !check_userpassword(&masterpassword){
+        println!("Password is incorrect");
+        return Ok(())
+    }
+
     let data = fs::read("data.enc")?;
     let decrypted_data: Vec<Entry> = serde_json::from_slice(&decrypt(&masterpassword, &data))?;
 
@@ -139,6 +148,11 @@ fn show(titel: &str) -> std::io::Result<()>{
 fn titels() -> std::io::Result<()>{
     println!("Input Master Password");
     let masterpassword = get_user_password().expect("error while getting user password");
+    if !check_userpassword(&masterpassword){
+        println!("Password is incorrect");
+        return Ok(())
+    }
+
     let data = fs::read("data.enc")?;
     let decrypted_data: Vec<Entry> = serde_json::from_slice(&decrypt(&masterpassword, &data))?;
 
@@ -146,6 +160,18 @@ fn titels() -> std::io::Result<()>{
         println!("Titel: {}", entry.titel);
     }
     Ok(())
+}
+
+fn check_userpassword(password: &kdf::Password) -> bool{
+    let stored_hash = fs::read("hash.bin").expect("error while reading stored hash from file");
+    let password_hash = digest(password.unprotected_as_bytes()).expect("error while hasing password");
+
+    if stored_hash == password_hash.as_ref(){
+        return true
+    }
+    else{
+        return false
+    }
 }
 
 fn store_masterpassword(password: &Digest) -> std::io::Result<()> {
