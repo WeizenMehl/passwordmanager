@@ -71,6 +71,7 @@ fn init() -> std::io::Result<()>{
     let password_hash = digest(masterpassword.unprotected_as_bytes()).expect("error while hashing masterpassword");
     store_masterpassword(&password_hash).expect("couldnt store password_hash");
 
+    init_sault()?;
     let data = br#"[]"#;
 
     let encrypted_data = encrypt(&masterpassword, data);
@@ -180,17 +181,11 @@ fn store_masterpassword(password: &Digest) -> std::io::Result<()> {
     Ok(())
 }
 
-fn store_sault(salt: &Salt) -> std::io::Result<()>{
+fn init_sault() -> std::io::Result<()>{
+    let salt = Salt::generate(32).expect("couldnt generate salt");
     let mut file = File::create("salt.bin")?;
     file.write_all(salt.as_ref())?;
     Ok(())
-}
-
-fn generate_key(password: &kdf::Password) -> Result<SecretKey, UnknownCryptoError>{
-    let salt = Salt::generate(32)?;
-    store_sault(&salt).expect("Couldnt store Salt"); 
-    let key = kdf::derive_key(password, &salt, 5, 1<<16, 32);
-    key
 }
 
 fn get_user_password() -> Result<Password,UnknownCryptoError>{
@@ -204,7 +199,7 @@ fn get_user_password() -> Result<Password,UnknownCryptoError>{
 }
 
 fn encrypt(password: &kdf::Password,data: &[u8]) -> Vec<u8>{
-    let key = generate_key(&password).expect("Error while generating key");
+    let key = load_key(password).expect("couldnt load key");
     let encrypted_data =aead::seal(&key,data).expect("Erro while trying to encrypting file");
     encrypted_data
 }
