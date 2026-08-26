@@ -10,6 +10,7 @@ use orion::hash::{digest, Digest};
 use orion::kdf::{self, Password, Salt};
 use serde_json::{json,Value};
 use serde::Deserialize;
+use rpassword;
 /// And simple CLI based password manager
 #[derive(Parser)]
 struct Cli{
@@ -124,7 +125,6 @@ struct Entry {
 
 // showes specific password for an given Titel
 fn show(titel: &str) -> std::io::Result<()>{
-    println!("Input Master Password");
     let masterpassword = get_user_password().expect("error while getting user password");
     if !check_userpassword(&masterpassword){
         println!("Password is incorrect");
@@ -147,7 +147,6 @@ fn show(titel: &str) -> std::io::Result<()>{
 
 // shows all titels
 fn titels() -> std::io::Result<()>{
-    println!("Input Master Password");
     let masterpassword = get_user_password().expect("error while getting user password");
     if !check_userpassword(&masterpassword){
         println!("Password is incorrect");
@@ -189,13 +188,10 @@ fn init_sault() -> std::io::Result<()>{
 }
 
 fn get_user_password() -> Result<Password,UnknownCryptoError>{
-    let mut password = String::new();
-    io::stdin()
-        .read_line(&mut password)
-        .expect("Error when trying to read password input"); //Password is currently visible when typing
-    let password = password.trim_end();
-    let password = kdf::Password::from_slice(password.as_bytes());
-    password
+    let masterpassword = rpassword::prompt_password("Input Master Password").unwrap();
+    let masterpassword = masterpassword.trim_end();
+    let masterpassword = kdf::Password::from_slice(masterpassword.as_bytes());
+    masterpassword
 }
 
 fn encrypt(password: &kdf::Password,data: &[u8]) -> Vec<u8>{
