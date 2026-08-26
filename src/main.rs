@@ -213,6 +213,6 @@ fn decrypt(password: &kdf::Password, data: &[u8]) -> Vec<u8>{
 fn load_key(password: & kdf::Password)  -> Result<SecretKey, UnknownCryptoError> { //used after initlasation
     let salt_bytes = fs::read("salt.bin").expect("Couldnt read salt.bin, check if file exitst");
     let salt = Salt::from_slice(&salt_bytes)?;
-    let key = kdf::derive_key(password, &salt, 5, 1<<16, 32);
+    let key = kdf::derive_key(password, &salt, 3, 1<<15, 32);
     key
 }
