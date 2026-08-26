@@ -187,7 +187,7 @@ fn store_sault(salt: &Salt) -> std::io::Result<()>{
 }
 
 fn generate_key(password: &kdf::Password) -> Result<SecretKey, UnknownCryptoError>{
-    let salt = Salt::default();
+    let salt = Salt::generate(32)?;
     store_sault(&salt).expect("Couldnt store Salt"); 
     let key = kdf::derive_key(password, &salt, 5, 1<<16, 32);
     key
