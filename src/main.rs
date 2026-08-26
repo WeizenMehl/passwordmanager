@@ -182,7 +182,7 @@ fn store_masterpassword(password: &Digest) -> std::io::Result<()> {
 }
 
 fn init_sault() -> std::io::Result<()>{
-    let salt = Salt::generate(32).expect("couldnt generate salt");
+    let salt = Salt::default();
     let mut file = File::create("salt.bin")?;
     file.write_all(salt.as_ref())?;
     Ok(())
