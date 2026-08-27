@@ -34,7 +34,7 @@ fn main() {
     let args = Cli::parse();
     if args.init {
         match init(){
-            Ok(()) => println!("Initiation was succesfull"),
+            Ok(()) => println!("Initiation was successfull"),
             Err(error) => {
                 println!("Couldnt initialize: {}", error)
             }
@@ -51,7 +51,7 @@ fn main() {
     }
     else if let Some(titel) = args.show {
         match show(&titel){
-            Ok(()) => println!("Showing password was succesfull"),
+            Ok(()) => println!("Showing password was successfull"),
             Err(error) => {
                 println!("Couldnt show password: {}", error)
             }
@@ -59,7 +59,7 @@ fn main() {
     }
     else if args.titles {
         match titles(){
-            Ok(()) => println!("Shwowing all titles was succesfull"),
+            Ok(()) => println!("Shwowing all titles was successfull"),
             Err(error) => {
                 println!("Couldnt show titles: {}", error)
             }
@@ -166,8 +166,8 @@ fn check_userpassword(password: &kdf::Password) -> bool{
     let stored_hash = fs::read("hash.bin").expect("error while reading stored hash from file");
     let password_hash = digest(password.unprotected_as_bytes()).expect("error while hasing password");
 
-    stored_hash == password_hash.as_ref();
-
+     stored_hash == password_hash.as_ref()
+}
 fn store_masterpassword(password: &Digest) -> std::io::Result<()> {
     let mut file = File::create("hash.bin")?;
     file.write_all(password.as_ref())?;
@@ -195,7 +195,7 @@ fn encrypt(password: &kdf::Password,data: &[u8]) -> Vec<u8>{
 }
 
 fn decrypt(password: &kdf::Password, data: &[u8]) -> Vec<u8>{
-    let key = load_key(password).expect("Error while loading key");
+    let key = load_key(password).expect("couldnt load key");
     let decrypted_data = aead::open(&key, data).expect("Error while trying to decrypt data");
     decrypted_data
 }
