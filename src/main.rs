@@ -14,7 +14,7 @@ use rpassword;
 /// And simple CLI based password manager
 #[derive(Parser)]
 struct Cli{
-    /// Initiates the Password Mangager
+    /// Initiates the Password Manager
     #[arg(short,long)]
     init: bool,
 
@@ -27,7 +27,7 @@ struct Cli{
     show: Option<String>,
 
     #[arg(short,long)]
-    titels: bool,
+    titles: bool,
 }
 
 fn main() {
@@ -51,17 +51,17 @@ fn main() {
     }
     else if let Some(titel) = args.show {
         match show(&titel){
-            Ok(()) => println!("Shwowing password was succesfull"),
+            Ok(()) => println!("Showing password was succesfull"),
             Err(error) => {
                 println!("Couldnt show password: {}", error)
             }
         }
     }
-    else if args.titels {
-        match titels(){
-            Ok(()) => println!("Shwowing all titels was succesfull"),
+    else if args.titles {
+        match titles(){
+            Ok(()) => println!("Shwowing all titles was succesfull"),
             Err(error) => {
-                println!("Couldnt show titels: {}", error)
+                println!("Couldnt show titles: {}", error)
             }
         }
     }
@@ -72,7 +72,7 @@ fn init() -> std::io::Result<()>{
     let password_hash = digest(masterpassword.unprotected_as_bytes()).expect("error while hashing masterpassword");
     store_masterpassword(&password_hash).expect("couldnt store password_hash");
 
-    init_sault()?;
+    init_salt()?;
     let data = br#"[]"#;
 
     let encrypted_data = encrypt(&masterpassword, data);
@@ -145,8 +145,8 @@ fn show(titel: &str) -> std::io::Result<()>{
     Ok(()) 
 }
 
-// shows all titels
-fn titels() -> std::io::Result<()>{
+// shows all titles
+fn titles() -> std::io::Result<()>{
     let masterpassword = get_user_password().expect("error while getting user password");
     if !check_userpassword(&masterpassword){
         println!("Password is incorrect");
@@ -174,7 +174,7 @@ fn store_masterpassword(password: &Digest) -> std::io::Result<()> {
     Ok(())
 }
 
-fn init_sault() -> std::io::Result<()>{
+fn init_salt() -> std::io::Result<()>{
     let salt = Salt::default();
     let mut file = File::create("salt.bin")?;
     file.write_all(salt.as_ref())?;
@@ -200,8 +200,8 @@ fn decrypt(password: &kdf::Password, data: &[u8]) -> Vec<u8>{
     decrypted_data
 }
 
-fn load_key(password: & kdf::Password)  -> Result<SecretKey, UnknownCryptoError> { //used after initlasation
-    let salt_bytes = fs::read("salt.bin").expect("Couldnt read salt.bin, check if file exitst");
+fn load_key(password: & kdf::Password)  -> Result<SecretKey, UnknownCryptoError> { //used after Initialization
+    let salt_bytes = fs::read("salt.bin").expect("Couldnt read salt.bin, check if file exists");
     let salt = Salt::from_slice(&salt_bytes)?;
     let key = kdf::derive_key(password, &salt, 3, 1<<15, 32);
     key
