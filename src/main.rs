@@ -9,9 +9,16 @@ use std::fs::File;
 use orion::aead;
 use orion::hash::{digest, Digest};
 use orion::kdf::{self, Password, Salt};
-use serde_json::{json,Value};
+use serde_json;
 use serde::Deserialize;
 use rpassword;
+
+#[derive(Deserialize, Serialize)]
+struct Entry {
+    password: String,
+    titel: String,
+}
+
 /// And simple CLI based password manager
 #[derive(Parser)]
 struct Cli{
@@ -98,33 +105,24 @@ fn add() -> std::io::Result<()>{
     io::stdin()
         .read_line(&mut titel)
         .expect("Couldnt read titel input");
-    let titel = titel.trim_end();
+    let titel = titel.trim_end().to_string();
     
     let mut password = String::new();
     println!("Input the password for the service");
     io::stdin()
         .read_line(&mut password)
         .expect("Couldnt read password input");
-    let password = password.trim_end();
+    let password = password.trim_end().to_string();
 
     let data = fs::read("data.enc")?;
-    let mut decrypted_data: Value = serde_json::from_slice(&decrypt(&masterpassword, &data))?;
+    let mut decrypted_data: Vec<Entry> = serde_json::from_slice(&decrypt(&masterpassword, &data))?;
 
 
-    decrypted_data.as_array_mut().unwrap().push(json!({
-        "titel": titel,
-        "password": password
-    }));
+    decrypted_data.push(Entry{password,titel});
     let modified: Vec<u8> = serde_json::to_vec(&decrypted_data)?;
     let encrypted_data = encrypt(&masterpassword, &modified);
     fs::write("data.enc", &encrypted_data).expect("Couldnt write to file");
     Ok(())
-}
-
-#[derive(Deserialize, Serialize)]
-struct Entry {
-    password: String,
-    titel: String,
 }
 
 // showes specific password for an given Titel
