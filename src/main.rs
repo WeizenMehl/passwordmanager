@@ -166,13 +166,7 @@ fn check_userpassword(password: &kdf::Password) -> bool{
     let stored_hash = fs::read("hash.bin").expect("error while reading stored hash from file");
     let password_hash = digest(password.unprotected_as_bytes()).expect("error while hasing password");
 
-    if stored_hash == password_hash.as_ref(){
-        return true
-    }
-    else{
-        return false
-    }
-}
+    stored_hash == password_hash.as_ref();
 
 fn store_masterpassword(password: &Digest) -> std::io::Result<()> {
     let mut file = File::create("hash.bin")?;
