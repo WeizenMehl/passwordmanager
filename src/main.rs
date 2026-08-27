@@ -1,6 +1,7 @@
 use clap::Parser;
 use orion::errors::UnknownCryptoError;
 use orion::aead::SecretKey;
+use serde::Serialize;
 use std::io::Write;
 use std::io;
 use std::fs;
@@ -28,6 +29,10 @@ struct Cli{
 
     #[arg(short,long)]
     titles: bool,
+
+    /// Deletes an entry
+    #[arg(short,long)]
+    delete: Option<String>,
 }
 
 fn main() {
@@ -35,34 +40,33 @@ fn main() {
     if args.init {
         match init(){
             Ok(()) => println!("Initiation was successfull"),
-            Err(error) => {
-                println!("Couldnt initialize: {}", error)
-            }
+            Err(error) => println!("Couldnt initialize: {}", error)
         }
 
     }
     else if args.add {
         match add(){
             Ok(()) => println!("Added password"),
-            Err(error) => {
-                println!("Couldnt add password: {}",error)
-            }
+            Err(error) => println!("Couldnt add password: {}",error)
         }
     }
     else if let Some(titel) = args.show {
         match show(&titel){
             Ok(()) => println!("Showing password was successfull"),
-            Err(error) => {
-                println!("Couldnt show password: {}", error)
-            }
+            Err(error) => println!("Couldnt show password: {}", error)
+            
         }
     }
     else if args.titles {
         match titles(){
-            Ok(()) => println!("Shwowing all titles was successfull"),
-            Err(error) => {
-                println!("Couldnt show titles: {}", error)
-            }
+            Ok(()) => println!("Showing all titles was successfull"),
+            Err(error) => println!("Couldnt show titles: {}", error)
+        }
+    }
+    else if let Some(titel) = args.delete{
+        match delete(&titel){
+            Ok(()) => println!("Deleteting entry was successfull"),
+            Err(error) => println!("Couldnt delete entry: {}", error)
         }
     }
 }
@@ -117,7 +121,7 @@ fn add() -> std::io::Result<()>{
     Ok(())
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 struct Entry {
     password: String,
     titel: String,
@@ -136,8 +140,8 @@ fn show(titel: &str) -> std::io::Result<()>{
 
     let password =  decrypted_data.iter().find(|x| x.titel == titel).map(|x| x.password.as_str());
     
-    if let Some(x) = password {
-        println!("Titel: {}, Password {}", titel,x);
+    if let Some(password) = password {
+        println!("Titel: {}, Password {}", titel,password);
     }
     else {
         println!("No entry found for titel: {}",titel);
@@ -159,6 +163,30 @@ fn titles() -> std::io::Result<()>{
     for entry in decrypted_data.iter(){
         println!("Titel: {}", entry.titel);
     }
+    Ok(())
+}
+
+fn delete(titel: &str) -> std::io::Result<()>{
+    let masterpassword = get_user_password().expect("error while getting user password");
+    if !check_userpassword(&masterpassword){
+        println!("Password is incorrect");
+        return Ok(())
+    }
+
+    let data = fs::read("data.enc")?;
+    let mut decrypted_data: Vec<Entry> = serde_json::from_slice(&decrypt(&masterpassword, &data))?;
+    let entry_index = decrypted_data.iter().position(|x|x.titel == titel);
+
+    if let Some(entry_index) = entry_index{
+        decrypted_data.remove(entry_index);
+        let modified: String = serde_json::to_string(&decrypted_data)?;
+        let encrypted_data = encrypt(&masterpassword, &modified.as_bytes());
+        fs::write("data.enc", &encrypted_data).expect("Couldnt write to file");
+    }
+    else{
+        println!("No entry found for titel: {}", titel);
+    }
+
     Ok(())
 }
 
@@ -201,7 +229,7 @@ fn decrypt(password: &kdf::Password, data: &[u8]) -> Vec<u8>{
 }
 
 fn load_key(password: & kdf::Password)  -> Result<SecretKey, UnknownCryptoError> { //used after Initialization
-    let salt_bytes = fs::read("salt.bin").expect("Couldnt read salt.bin, check if file exists");
+    let salt_bytes = fs::read("salt.bin").expect("Couldnt read salt.bin, salt.bin should exist");
     let salt = Salt::from_slice(&salt_bytes)?;
     let key = kdf::derive_key(password, &salt, 3, 1<<15, 32);
     key
